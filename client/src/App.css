@@ -18,13 +18,23 @@
   font-weight: 700;
   background: linear-gradient(135deg, var(--primary), var(--accent));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.input-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  padding: 16px;
+  border-radius: 20px;
 }
 
 .input-container {
   display: flex;
   gap: 12px;
-  position: relative;
 }
 
 .input-container input {
@@ -101,8 +111,20 @@
   border-color: var(--primary);
 }
 
-.todo-text {
+.todo-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.todo-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.todo-text {
   font-size: 1rem;
   color: var(--text-primary);
   transition: all 0.3s ease;
@@ -112,6 +134,24 @@
   color: var(--text-secondary);
   text-decoration: line-through;
   opacity: 0.6;
+}
+
+.todo-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.date-group-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 16px 0 8px 4px;
+  opacity: 0.8;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 8px;
 }
 
 .delete-btn {
@@ -124,6 +164,63 @@
 .delete-btn:hover {
   background: rgba(239, 68, 68, 0.1);
   color: var(--danger);
+}
+
+.segment-selector {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.segment-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.segment-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.segment-btn.active {
+  border-color: currentColor;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.segment-btn.quick.active { color: #fbbf24; }
+.segment-btn.short.active { color: var(--primary); }
+.segment-btn.long.active { color: #94a3b8; }
+
+.segment-header.quick { color: #fbbf24; }
+.segment-header.short { color: var(--primary); }
+.segment-header.long { color: #94a3b8; }
+
+.todo-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.todo-tag.quick { background: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+.todo-tag.short { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+.todo-tag.long { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+.seg-icon {
+  font-size: 1rem;
 }
 
 .empty-state {
