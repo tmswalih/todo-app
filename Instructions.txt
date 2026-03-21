@@ -1,5 +1,13 @@
-In Quick:
-    Give an otption to choose ASAP or Enter completion time and date;
+In home page Give a button in any corner with + icon to add task and move the add feature to it. 
 
-In Short and Long:
-    Give slide bar in Task veiwing list to indicate Completion status.  
+Add a new page named Daily Tasks.which include:
+
+List out all the all daily tasks in a day with a checkbox.
+reset all tasks checkbox at 12:00 AM daily.
+place a modify button inthe top right corner of the daily task page to add or remove daily tasks.
+
+
+
+
+
+
