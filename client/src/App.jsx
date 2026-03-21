@@ -10,11 +10,13 @@ function App() {
   });
   const [input, setInput] = useState('');
   const [segment, setSegment] = useState('short');
+  const [quickOption, setQuickOption] = useState('asap');
+  const [scheduledTime, setScheduledTime] = useState('');
 
   const segments = [
-    { id: 'quick', label: 'Quick response needed', icon: '⚡' },
-    { id: 'short', label: 'Short term', icon: '📅' },
-    { id: 'long', label: 'Long term', icon: '⏳' }
+    { id: 'quick', label: 'Quick', icon: '⚡' },
+    { id: 'short', label: 'Short', icon: '📅' },
+    { id: 'long', label: 'Long', icon: '⏳' }
   ];
 
   useEffect(() => {
@@ -30,6 +32,9 @@ function App() {
       text: input,
       completed: false,
       segment: segment,
+      quickOption: segment === 'quick' ? quickOption : null,
+      scheduledTime: segment === 'quick' && quickOption === 'scheduled' ? scheduledTime : null,
+      progress: (segment === 'short' || segment === 'long') ? 0 : null,
       createdAt: new Date().toISOString()
     };
     
@@ -45,6 +50,12 @@ function App() {
 
   const deleteTodo = (id) => {
     setTodos(todos.filter(todo => todo.id !== id));
+  };
+
+  const updateProgress = (id, value) => {
+    setTodos(todos.map(todo => 
+      todo.id === id ? { ...todo, progress: parseInt(value), completed: parseInt(value) === 100 } : todo
+    ));
   };
 
   const getGroupDate = (dateStr) => {
@@ -78,18 +89,6 @@ function App() {
       </header>
 
       <form className="input-form" onSubmit={addTodo}>
-        <div className="input-container">
-          <input 
-            type="text" 
-            placeholder="Add a new task..." 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <button type="submit" className="add-btn">
-            <Plus size={20} strokeWidth={2.5} />
-          </button>
-        </div>
-        
         <div className="segment-selector">
           {segments.map((seg) => (
             <button
@@ -102,6 +101,48 @@ function App() {
               <span className="seg-label">{seg.label}</span>
             </button>
           ))}
+        </div>
+
+        {segment === 'quick' && (
+          <div className="quick-options-container">
+            <div className="quick-options-toggle">
+              <button 
+                type="button" 
+                className={`option-btn ${quickOption === 'asap' ? 'active' : ''}`}
+                onClick={() => setQuickOption('asap')}
+              >
+                ASAP
+              </button>
+              <button 
+                type="button" 
+                className={`option-btn ${quickOption === 'scheduled' ? 'active' : ''}`}
+                onClick={() => setQuickOption('scheduled')}
+              >
+                Schedule
+              </button>
+            </div>
+            {quickOption === 'scheduled' && (
+              <input 
+                type="datetime-local" 
+                className="time-picker"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                required
+              />
+            )}
+          </div>
+        )}
+
+        <div className="input-container">
+          <input 
+            type="text" 
+            placeholder="Add a new task..." 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+          <button type="submit" className="add-btn">
+            <Plus size={20} strokeWidth={2.5} />
+          </button>
         </div>
       </form>
 
@@ -140,11 +181,27 @@ function App() {
                       <div className="todo-meta">
                         <span className="todo-time">
                           {formatTime(todo.createdAt)}
+                          {todo.quickOption === 'scheduled' && ` • Scheduled: ${new Date(todo.scheduledTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
                         </span>
                         <span className={`todo-tag ${todo.segment || 'short'}`}>
                           {(segments.find(s => s.id === (todo.segment || 'short')) || {}).label}
+                          {todo.quickOption === 'asap' && ' • ASAP'}
                         </span>
                       </div>
+                      
+                      {(todo.segment === 'short' || todo.segment === 'long') && (
+                        <div className="progress-container">
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={todo.progress || 0}
+                            className="progress-slider"
+                            onChange={(e) => updateProgress(todo.id, e.target.value)}
+                          />
+                          <span className="progress-value">{todo.progress || 0}%</span>
+                        </div>
+                      )}
                     </div>
 
                     <button 

@@ -1,0 +1,5 @@
+In Quick:
+    Give an otption to choose ASAP or Enter completion time and date;
+
+In Short and Long:
+    Give slide bar in Task veiwing list to indicate Completion status.  
