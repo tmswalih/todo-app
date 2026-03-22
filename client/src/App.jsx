@@ -10,7 +10,20 @@ function App() {
   });
   const [dailyTasks, setDailyTasks] = useState(() => {
     const saved = localStorage.getItem('dailyTasks');
-    return saved ? JSON.parse(saved) : [];
+    const parsed = saved ? JSON.parse(saved) : [];
+    if (parsed.length > 0) return parsed;
+    // Default tasks matching the Google Form
+    return [
+      { id: 1, text: 'Yswa' },
+      { id: 2, text: 'Vaq' },
+      { id: 3, text: 'Mul' },
+      { id: 4, text: 'Hadd' },
+      { id: 5, text: 'SB' },
+      { id: 6, text: 'LB' },
+      { id: 7, text: 'LA' },
+      { id: 8, text: 'MA' },
+      { id: 9, text: 'EA' }
+    ];
   });
   const [dailyCompletions, setDailyCompletions] = useState(() => {
     const saved = localStorage.getItem('dailyCompletions');
@@ -46,18 +59,20 @@ function App() {
     localStorage.setItem('lastResetDate', new Date().toDateString());
   }, [dailyCompletions]);
 
-  // Check for reset every minute
+  // Check for reset every minute and auto-submit
   useEffect(() => {
     const interval = setInterval(() => {
       const today = new Date().toDateString();
       const lastResetDate = localStorage.getItem('lastResetDate');
-      if (lastResetDate !== today) {
+      if (lastResetDate && lastResetDate !== today) {
+        // Auto-submit previous day's data before resetting
+        submitToGoogleForm(true);
         setDailyCompletions([]);
         localStorage.setItem('lastResetDate', today);
       }
     }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [dailyTasks, dailyCompletions]);
 
   const addTodo = (e) => {
     e.preventDefault();
@@ -85,6 +100,50 @@ function App() {
     const newTask = { id: Date.now(), text: dailyInput };
     setDailyTasks([...dailyTasks, newTask]);
     setDailyInput('');
+  };
+
+  const FORM_URL = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSfu5cdhlxzsHjOk26_HV2mO969AWWRMz6VbmGLysktxpsqlqQ/formResponse';
+  const FORM_MAPPING = {
+    'Yswa': 'entry.1881917280',
+    'Vaq': 'entry.279402658',
+    'Mul': 'entry.1508951882',
+    'Hadd': 'entry.1352894286',
+    'SB': 'entry.1006985178',
+    'LB': 'entry.593075016',
+    'LA': 'entry.1240290504',
+    'MA': 'entry.1824458312',
+    'EA': 'entry.231506889'
+  };
+
+  const submitToGoogleForm = async (silent = false) => {
+    const formData = new FormData();
+    
+    // Default values for all mapped fields
+    Object.keys(FORM_MAPPING).forEach(taskName => {
+      const entryId = FORM_MAPPING[taskName];
+      const task = dailyTasks.find(t => t.text.trim().toLowerCase() === taskName.toLowerCase());
+      const isCompleted = task && dailyCompletions.includes(task.id);
+      formData.append(entryId, isCompleted ? 'Yes' : 'NO');
+    });
+
+    // Handle "Untitled Question" if exists
+    const untitledTask = dailyTasks.find(t => t.text.toLowerCase().includes('untitled'));
+    if (untitledTask) {
+      formData.append('entry.693750357', dailyCompletions.includes(untitledTask.id) ? 'Option 1' : '');
+    }
+
+    try {
+      // Using no-cors because Google Forms doesn't return CORS headers for formResponse
+      await fetch(FORM_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: formData
+      });
+      if (!silent) alert('Submitted to Google Form successfully!');
+    } catch (error) {
+      console.error('Submission error:', error);
+      if (!silent) alert('Failed to submit to Google Form.');
+    }
   };
 
   const toggleDailyTask = (id) => {
@@ -137,6 +196,23 @@ function App() {
   const formatTime = (dateStr) => {
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const restoreDefaults = () => {
+    const defaults = [
+      { id: '1', text: 'Yswa' },
+      { id: '2', text: 'Vaq' },
+      { id: '3', text: 'Mul' },
+      { id: '4', text: 'Hadd' },
+      { id: '5', text: 'SB' },
+      { id: '6', text: 'LB' },
+      { id: '7', text: 'LA' },
+      { id: '8', text: 'MA' },
+      { id: '9', text: 'EA' },
+      { id: '10', text: 'Untitled Question' }
+    ];
+    setDailyTasks(defaults);
+    setDailyCompletions([]);
   };
 
   return (
@@ -339,6 +415,10 @@ function App() {
         </>
       ) : (
         <div className="daily-tasks-page">
+          <div className="daily-header-info">
+            <span className="daily-date">{new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            <span className="daily-day">{new Date().toLocaleDateString(undefined, { weekday: 'long' })}</span>
+          </div>
           {isModifyMode && (
             <form className="daily-input-form" onSubmit={addDailyTask}>
               <div className="input-container">
@@ -353,6 +433,24 @@ function App() {
                   <Plus size={20} strokeWidth={2.5} />
                 </button>
               </div>
+              <button 
+                type="button" 
+                className="restore-btn"
+                onClick={restoreDefaults}
+                style={{
+                  marginTop: '12px',
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '12px',
+                  background: 'rgba(251, 191, 36, 0.1)',
+                  color: '#fbbf24',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  border: '1px solid rgba(251, 191, 36, 0.2)'
+                }}
+              >
+                Restore Form Template
+              </button>
             </form>
           )}
 
@@ -381,6 +479,13 @@ function App() {
               ) : (
                 <div className="empty-state">
                   <p>No daily tasks set. Click Modify to add some!</p>
+                  <button 
+                    onClick={restoreDefaults}
+                    className="submit-form-btn"
+                    style={{ marginTop: '16px' }}
+                  >
+                    Load Form Tasks
+                  </button>
                 </div>
               )}
             </AnimatePresence>

@@ -37,6 +37,23 @@
   border-color: var(--danger);
 }
 
+.submit-form-btn {
+  background: var(--primary);
+  color: white;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--primary);
+  box-shadow: 0 4px 10px var(--primary-glow);
+  transition: all 0.2s ease;
+}
+
+.submit-form-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
 .header h1 {
   font-size: 2rem;
   font-weight: 700;
@@ -258,10 +275,27 @@
   margin-bottom: -1px;
 }
 
-.daily-tasks-page {
+.daily-header-info {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 4px;
+  padding: 8px 4px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+}
+
+.daily-date {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.daily-day {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .daily-list {
@@ -356,6 +390,7 @@
 .progress-slider {
   flex: 1;
   -webkit-appearance: none;
+  appearance: none;
   height: 6px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
