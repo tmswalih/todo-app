@@ -136,6 +136,7 @@ function App() {
       setDailyInput('');
     } catch (err) {
       console.error('Error adding daily task:', err);
+      alert('Failed to add task. Check server status.');
     }
   };
 
@@ -175,6 +176,7 @@ function App() {
         }
       } catch (err) {
         console.error('Error toggling daily task:', err);
+        alert('Failed to update task. Is the server running?');
       }
     }
   };
@@ -219,17 +221,16 @@ function App() {
   };
 
   const restoreDefaults = async () => {
-    const defaults = ['Yswa', 'Vaq', 'Mul', 'Hadd', 'SB', 'LB', 'LA', 'MA', 'EA'];
-    for (const text of defaults) {
-      await fetch('/api/daily/manage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, action: 'add' })
-      });
+    try {
+      await fetch('/api/daily/restore', { method: 'POST' });
+      const res = await fetch('/api/daily');
+      const data = await res.json();
+      setDailyTasks(data.tasks);
+      setDailyCompletions(data.completedIds);
+    } catch (err) {
+      console.error('Error restoring defaults:', err);
+      alert('Failed to restore tasks. Is the server running?');
     }
-    const res = await fetch('/api/daily');
-    const data = await res.json();
-    setDailyTasks(data.tasks);
   };
 
   return (

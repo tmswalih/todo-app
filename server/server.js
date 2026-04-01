@@ -112,6 +112,23 @@ app.get("/api/daily/pending", (req, res) => {
     }
 });
 
+app.post("/api/daily/restore", (req, res) => {
+    try {
+        const defaults = ['Yswa', 'Vaq', 'Mul', 'Hadd', 'SB', 'LB', 'LA', 'MA', 'EA'];
+        
+        // Use a transaction for efficiency
+        const insert = db.prepare("INSERT INTO daily_tasks (text) VALUES (?)");
+        const insertMany = db.transaction((tasks) => {
+            for (const task of tasks) insert.run(task);
+        });
+        
+        insertMany(defaults);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get("/api/daily/stats", (req, res) => {
     try {
         const stats = db.prepare(`
