@@ -1,0 +1,8 @@
+
+Make following changes in the daily task section.
+1. Remove the google form integration.
+2. Connect Daily task progress to an MySQL database.
+3. Perform the tasks mentioned in google sheets in these database(save daily task status to database at the end of the day,reset daily task status at the end of the day etc.)
+
+
+Actually this is a personalised app for me to track my daily tasks and progress. keep it in mind.

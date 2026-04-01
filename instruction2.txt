@@ -1,0 +1,11 @@
+
+This is all cbout the daily task
+
+Furthur needs:
+1.when iam note completed my daily task,show it in pending list below the daily task page.
+    which include the date and day of each task.
+2.if an daily task is completed after that day. note it as delay and display lagged days in database.
+
+
+NB: Actually this is a personalised app for me to track my daily tasks and progress. keep it in mind.
+

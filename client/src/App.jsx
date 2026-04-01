@@ -8,29 +8,9 @@ function App() {
     const saved = localStorage.getItem('todos');
     return saved ? JSON.parse(saved) : [];
   });
-  const [dailyTasks, setDailyTasks] = useState(() => {
-    const saved = localStorage.getItem('dailyTasks');
-    const parsed = saved ? JSON.parse(saved) : [];
-    if (parsed.length > 0) return parsed;
-    // Default tasks matching the Google Form
-    return [
-      { id: 1, text: 'Yswa' },
-      { id: 2, text: 'Vaq' },
-      { id: 3, text: 'Mul' },
-      { id: 4, text: 'Hadd' },
-      { id: 5, text: 'SB' },
-      { id: 6, text: 'LB' },
-      { id: 7, text: 'LA' },
-      { id: 8, text: 'MA' },
-      { id: 9, text: 'EA' }
-    ];
-  });
-  const [dailyCompletions, setDailyCompletions] = useState(() => {
-    const saved = localStorage.getItem('dailyCompletions');
-    const resetDate = localStorage.getItem('lastResetDate');
-    const today = new Date().toDateString();
-    return (saved && resetDate === today) ? JSON.parse(saved) : [];
-  });
+  const [dailyTasks, setDailyTasks] = useState([]);
+  const [dailyCompletions, setDailyCompletions] = useState([]);
+  const [pendingTasks, setPendingTasks] = useState([]);
   const [view, setView] = useState('home');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModifyMode, setIsModifyMode] = useState(false);
@@ -39,6 +19,57 @@ function App() {
   const [segment, setSegment] = useState('short');
   const [quickOption, setQuickOption] = useState('asap');
   const [scheduledTime, setScheduledTime] = useState('');
+  const [notificationPermission, setNotificationPermission] = useState('default');
+
+  // Request Notification Permission
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+        });
+      }
+    }
+  }, []);
+
+  // Notification Checker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      setTodos(prevTodos => {
+        let changed = false;
+        const newTodos = prevTodos.map(todo => {
+          if (
+            todo.segment === 'quick' && 
+            todo.quickOption === 'scheduled' && 
+            todo.scheduledTime && 
+            !todo.completed && 
+            !todo.notified
+          ) {
+            const deadline = new Date(todo.scheduledTime);
+            const diff = deadline.getTime() - now.getTime();
+            
+            // Notify if deadline is within 1 minute or has just passed
+            if (diff <= 60000 && diff > -60000) {
+              if (Notification.permission === 'granted') {
+                new Notification('Taskly Reminder', {
+                  body: `Quick Task: ${todo.text}`,
+                  icon: '/vite.svg' // Placeholder icon
+                });
+              }
+              changed = true;
+              return { ...todo, notified: true };
+            }
+          }
+          return todo;
+        });
+        return changed ? newTodos : prevTodos;
+      });
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const segments = [
     { id: 'quick', label: 'Quick', icon: '⚡' },
@@ -50,29 +81,25 @@ function App() {
     localStorage.setItem('todos', JSON.stringify(todos));
   }, [todos]);
 
+  // Fetch Daily Tasks and Pending Tasks from SQLite
   useEffect(() => {
-    localStorage.setItem('dailyTasks', JSON.stringify(dailyTasks));
-  }, [dailyTasks]);
+    fetch('/api/daily')
+      .then(res => res.json())
+      .then(data => {
+        setDailyTasks(data.tasks);
+        setDailyCompletions(data.completedIds);
+      })
+      .catch(err => console.error('Error fetching daily tasks:', err));
+
+    fetch('/api/daily/pending')
+      .then(res => res.json())
+      .then(data => setPendingTasks(data))
+      .catch(err => console.error('Error fetching pending tasks:', err));
+  }, [view]);
 
   useEffect(() => {
-    localStorage.setItem('dailyCompletions', JSON.stringify(dailyCompletions));
-    localStorage.setItem('lastResetDate', new Date().toDateString());
-  }, [dailyCompletions]);
-
-  // Check for reset every minute and auto-submit
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const today = new Date().toDateString();
-      const lastResetDate = localStorage.getItem('lastResetDate');
-      if (lastResetDate && lastResetDate !== today) {
-        // Auto-submit previous day's data before resetting
-        submitToGoogleForm(true);
-        setDailyCompletions([]);
-        localStorage.setItem('lastResetDate', today);
-      }
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [dailyTasks, dailyCompletions]);
+    localStorage.setItem('todos', JSON.stringify(todos));
+  }, [todos]);
 
   const addTodo = (e) => {
     e.preventDefault();
@@ -86,7 +113,8 @@ function App() {
       quickOption: segment === 'quick' ? quickOption : null,
       scheduledTime: segment === 'quick' && quickOption === 'scheduled' ? scheduledTime : null,
       progress: (segment === 'short' || segment === 'long') ? 0 : null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      notified: false
     };
     
     setTodos([newTodo, ...todos]);
@@ -94,67 +122,59 @@ function App() {
     setIsModalOpen(false);
   };
 
-  const addDailyTask = (e) => {
+  const addDailyTask = async (e) => {
     e.preventDefault();
     if (!dailyInput.trim()) return;
-    const newTask = { id: Date.now(), text: dailyInput };
-    setDailyTasks([...dailyTasks, newTask]);
-    setDailyInput('');
-  };
-
-  const FORM_URL = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSfu5cdhlxzsHjOk26_HV2mO969AWWRMz6VbmGLysktxpsqlqQ/formResponse';
-  const FORM_MAPPING = {
-    'Yswa': 'entry.1881917280',
-    'Vaq': 'entry.279402658',
-    'Mul': 'entry.1508951882',
-    'Hadd': 'entry.1352894286',
-    'SB': 'entry.1006985178',
-    'LB': 'entry.593075016',
-    'LA': 'entry.1240290504',
-    'MA': 'entry.1824458312',
-    'EA': 'entry.231506889'
-  };
-
-  const submitToGoogleForm = async (silent = false) => {
-    const formData = new FormData();
-    
-    // Default values for all mapped fields
-    Object.keys(FORM_MAPPING).forEach(taskName => {
-      const entryId = FORM_MAPPING[taskName];
-      const task = dailyTasks.find(t => t.text.trim().toLowerCase() === taskName.toLowerCase());
-      const isCompleted = task && dailyCompletions.includes(task.id);
-      formData.append(entryId, isCompleted ? 'Yes' : 'NO');
-    });
-
-    // Handle "Untitled Question" if exists
-    const untitledTask = dailyTasks.find(t => t.text.toLowerCase().includes('untitled'));
-    if (untitledTask) {
-      formData.append('entry.693750357', dailyCompletions.includes(untitledTask.id) ? 'Option 1' : '');
-    }
-
     try {
-      // Using no-cors because Google Forms doesn't return CORS headers for formResponse
-      await fetch(FORM_URL, {
+      const res = await fetch('/api/daily/manage', {
         method: 'POST',
-        mode: 'no-cors',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: dailyInput, action: 'add' })
       });
-      if (!silent) alert('Submitted to Google Form successfully!');
-    } catch (error) {
-      console.error('Submission error:', error);
-      if (!silent) alert('Failed to submit to Google Form.');
+      const newTask = await res.json();
+      setDailyTasks([newTask, ...dailyTasks]);
+      setDailyInput('');
+    } catch (err) {
+      console.error('Error adding daily task:', err);
     }
   };
 
-  const toggleDailyTask = (id) => {
-    if (isModifyMode) {
-      setDailyTasks(dailyTasks.filter(task => task.id !== id));
-      setDailyCompletions(dailyCompletions.filter(cid => cid !== id));
-    } else {
-      if (dailyCompletions.includes(id)) {
+  const toggleDailyTask = async (id, date = null) => {
+    if (isModifyMode && !date) {
+      try {
+        await fetch('/api/daily/manage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action: 'delete' })
+        });
+        setDailyTasks(dailyTasks.filter(task => task.id !== id));
         setDailyCompletions(dailyCompletions.filter(cid => cid !== id));
-      } else {
-        setDailyCompletions([...dailyCompletions, id]);
+      } catch (err) {
+        console.error('Error deleting daily task:', err);
+      }
+    } else {
+      try {
+        const res = await fetch('/api/daily/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId: id, date })
+        });
+        const { completed } = await res.json();
+        
+        if (date) {
+            // Re-fetch pending if we toggled a past date
+            const pRes = await fetch('/api/daily/pending');
+            const pData = await pRes.json();
+            setPendingTasks(pData);
+        } else {
+            if (completed) {
+              setDailyCompletions([...dailyCompletions, id]);
+            } else {
+              setDailyCompletions(dailyCompletions.filter(cid => cid !== id));
+            }
+        }
+      } catch (err) {
+        console.error('Error toggling daily task:', err);
       }
     }
   };
@@ -198,21 +218,18 @@ function App() {
     return isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const restoreDefaults = () => {
-    const defaults = [
-      { id: '1', text: 'Yswa' },
-      { id: '2', text: 'Vaq' },
-      { id: '3', text: 'Mul' },
-      { id: '4', text: 'Hadd' },
-      { id: '5', text: 'SB' },
-      { id: '6', text: 'LB' },
-      { id: '7', text: 'LA' },
-      { id: '8', text: 'MA' },
-      { id: '9', text: 'EA' },
-      { id: '10', text: 'Untitled Question' }
-    ];
-    setDailyTasks(defaults);
-    setDailyCompletions([]);
+  const restoreDefaults = async () => {
+    const defaults = ['Yswa', 'Vaq', 'Mul', 'Hadd', 'SB', 'LB', 'LA', 'MA', 'EA'];
+    for (const text of defaults) {
+      await fetch('/api/daily/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, action: 'add' })
+      });
+    }
+    const res = await fetch('/api/daily');
+    const data = await res.json();
+    setDailyTasks(data.tasks);
   };
 
   return (
@@ -227,6 +244,11 @@ function App() {
             >
               {isModifyMode ? 'Done' : 'Modify'}
             </button>
+          )}
+          {notificationPermission === 'denied' && (
+            <div className="notification-warning" title="Notifications are blocked">
+              🔔🚫
+            </div>
           )}
           <LayoutGrid className="text-secondary" size={24} />
         </div>
@@ -490,6 +512,36 @@ function App() {
               )}
             </AnimatePresence>
           </div>
+
+          {!isModifyMode && pendingTasks.length > 0 && (
+            <div className="pending-section">
+              <h3 className="section-title">Pending List</h3>
+              <div className="daily-list">
+                <AnimatePresence>
+                  {pendingTasks.map((task, idx) => (
+                    <motion.div
+                      key={`${task.taskId}-${task.date}`}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="daily-item pending"
+                      onClick={() => toggleDailyTask(task.taskId, task.date)}
+                    >
+                      <div className="todo-checkbox">
+                        {/* Always unchecked in pending list, clicking it completes it and removes it from list */}
+                      </div>
+                      <div className="todo-content">
+                        <span className="todo-text">{task.text}</span>
+                        <div className="todo-meta">
+                          <span className="todo-date">{task.date} • {task.day}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
