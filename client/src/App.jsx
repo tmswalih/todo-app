@@ -83,17 +83,17 @@ function App() {
 
   // Fetch Daily Tasks and Pending Tasks from SQLite
   useEffect(() => {
-    fetch('/api/daily')
+    fetch('http://localhost:5000/api/daily')
       .then(res => res.json())
       .then(data => {
-        setDailyTasks(data.tasks);
-        setDailyCompletions(data.completedIds);
+        setDailyTasks(data.tasks || []);
+        setDailyCompletions(data.completedIds || []);
       })
       .catch(err => console.error('Error fetching daily tasks:', err));
 
-    fetch('/api/daily/pending')
+    fetch('http://localhost:5000/api/daily/pending')
       .then(res => res.json())
-      .then(data => setPendingTasks(data))
+      .then(data => setPendingTasks(data || []))
       .catch(err => console.error('Error fetching pending tasks:', err));
   }, [view]);
 
@@ -126,7 +126,7 @@ function App() {
     e.preventDefault();
     if (!dailyInput.trim()) return;
     try {
-      const res = await fetch('/api/daily/manage', {
+      const res = await fetch('http://localhost:5000/api/daily/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: dailyInput, action: 'add' })
@@ -143,7 +143,7 @@ function App() {
   const toggleDailyTask = async (id, date = null) => {
     if (isModifyMode && !date) {
       try {
-        await fetch('/api/daily/manage', {
+        await fetch('http://localhost:5000/api/daily/manage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, action: 'delete' })
@@ -155,7 +155,7 @@ function App() {
       }
     } else {
       try {
-        const res = await fetch('/api/daily/toggle', {
+        const res = await fetch('http://localhost:5000/api/daily/toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ taskId: id, date })
@@ -164,7 +164,7 @@ function App() {
         
         if (date) {
             // Re-fetch pending if we toggled a past date
-            const pRes = await fetch('/api/daily/pending');
+            const pRes = await fetch('http://localhost:5000/api/daily/pending');
             const pData = await pRes.json();
             setPendingTasks(pData);
         } else {
@@ -222,14 +222,21 @@ function App() {
 
   const restoreDefaults = async () => {
     try {
-      await fetch('/api/daily/restore', { method: 'POST' });
-      const res = await fetch('/api/daily');
+      const response = await fetch('http://localhost:5000/api/daily/restore', { method: 'POST' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Server error');
+      }
+      
+      const res = await fetch('http://localhost:5000/api/daily');
       const data = await res.json();
       setDailyTasks(data.tasks);
       setDailyCompletions(data.completedIds);
+      setIsModifyMode(false);
+      alert('Tasks restored from template successfully!');
     } catch (err) {
       console.error('Error restoring defaults:', err);
-      alert('Failed to restore tasks. Is the server running?');
+      alert('Restore Failed: ' + err.message);
     }
   };
 
